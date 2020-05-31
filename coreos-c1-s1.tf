@@ -1,6 +1,8 @@
-# https://github.com/dmacvicar/terraform-provider-libvirt/blob/master/examples/coreos/main.tf
+# https://github.com/dmacvicar/terraform-provider-libvirt/tree/master/examples/v0.12/coreos
 #
 # https://github.com/ingobecker/tf-libvirt-fcos-gitlab-runner/blob/master/main.tf#L8
+#
+# https://github.com/coreos/fcct/blob/master/docs/configuration-v1_0.md
 #
 terraform {
   required_version = ">= 0.12"

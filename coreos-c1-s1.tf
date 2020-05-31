@@ -1,5 +1,7 @@
 # https://github.com/dmacvicar/terraform-provider-libvirt/blob/master/examples/coreos/main.tf
 #
+# https://github.com/ingobecker/tf-libvirt-fcos-gitlab-runner/blob/master/main.tf#L8
+#
 terraform {
   required_version = ">= 0.12"
 }
@@ -7,6 +9,9 @@ terraform {
 # -[Provider]--------------------------------------------------------------
 provider "libvirt" {
   uri = "qemu:///system"
+}
+
+provider "ct" {
 }
 
 # -[Variables]-------------------------------------------------------------
@@ -19,60 +24,85 @@ variable "hostname_format" {
   default = "l5490-infrastructure-coreos-c1-s%02d"
 }
 
+variable "user" {
+  type    = string
+  default = "core"
+}
+
+variable "password" {
+  type    = string
+  default = "core"
+}
+
+variable "ssh_key" {
+  type    = string
+  default = "ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAACAQCv+x4NKHMrFaS1VR71pnsGSq6en2EgmGBS3hHMm0l2AYBBwOVO2byokFo93w2IIe0tnJ+QerezGsAm1pGHrbx2HiTWF9uD+RyFQCQN0LKx1soMhEGryvjpS7rgDVMeCNn0Ej28m+NR1+6jhg4gA38c42ZZCcNd89pcpVWsMNpO/RVk25DfS/M5BJkUQMOoiMVwby0tJ62jh83fgzDMukynmA8xOX9D/uvL1kamEzbsA6Ioh8QRdBt4mlO6tnR6WxHTvGU5IHgE01Qm27s+YJpegH93VU0rxysGMGPd0VgvDHJmnR0l+ZR9d9T/iMzjxXw2ZX6FpG8JxwdAb9Wd2dySwFKZBwAXPtjm5GUTw22tk+gdk7FfgA2fjFeHGAVswX1loIREXMKpSuerGIrtroQwwBAEgnT84jqFnBYb5ApypaeKSQR1m6ZVnNjjBfj7t19lr+/hSRyorYZoGgFuryBY7R1UOH7zNAEnJlCLv7yab9ERCCwwukhP+nWoTjy6Fv+aF49LJpqiAbDV76TxAzjxvrFl4vv09NnVHVmYcIOaJuLWDmqS7CcLb8piFbcLvgTMxuN3OFZ0ybVfjA55bn9fPD2yIt57htwoaMU4sR3ULiybw6EAiIwJJT3Gq5WZ42Yh7G4WJIlnXCAy/4RL2Rtq/irXoaxn2Uw+KI0I5GkAOw== czhujer@czhujer-Latitude-5490"
+}
+
 # variable "libvirt_provider" {
 #   type = string
 # }
 
+locals {
+  fcc_vars = {
+    password                    = bcrypt(var.password)
+    ssh_key                     = var.ssh_key
+    user                        = var.user
+  }
+}
+
 # -[Resources]-------------------------------------------------------------
+
+# resource "local_file" "fcc_debug" {
+#   content  = templatefile("${path.module}/content/fcc.yaml", local.fcc_vars)
+#   filename = "${path.module}/foo.yaml"
+# }
+
+data "ct_config" "startup_ign" {
+  content      = templatefile("${path.module}/content/fcc.yaml", local.fcc_vars)
+  pretty_print = true
+}
+
 resource "libvirt_volume" "coreos-disk" {
   name             = "${format(var.hostname_format, count.index + 1)}.qcow2"
   count            = var.hosts
-  base_volume_name = "coreos_production_qemu_image.img"
+  base_volume_name = "fedora-coreos-31.20200505.3.0-qemu.x86_64.qcow2"
   pool             = "default"
   format           = "qcow2"
 }
 
-# Loading ignition configs in QEMU requires at least QEMU v2.6
-# resource "libvirt_ignition" "ignition" {
-#   name    = "${format(var.hostname_format, count.index + 1)}-ignition"
-#   pool    = "default"
-#   count   = var.hosts
-#   content = element(data.ignition_config.startup.*.rendered, count.index)
-# }
+resource "libvirt_ignition" "ignition" {
+  name    = "${format(var.hostname_format, count.index + 1)}-ignition"
+  pool    = "default"
+  count   = var.hosts
+  #content = element(data.ignition_config.startup.*.rendered, count.index)
+  content = data.ct_config.startup_ign.rendered
+}
 
-# Create the virtual machines
 resource "libvirt_domain" "coreos-machine" {
   count  = var.hosts
   name   = format(var.hostname_format, count.index + 1)
   vcpu   = "2"
   memory = "1048"
 
-  ## Use qemu-agent in conjunction with the container
-  #qemu_agent = true
-  #coreos_ignition = element(libvirt_ignition.ignition.*.id, count.index)
+  coreos_ignition = element(libvirt_ignition.ignition.*.id, count.index)
 
   disk {
     volume_id = element(libvirt_volume.coreos-disk.*.id, count.index)
   }
 
   graphics {
-    ## Bug in linux up to 4.14-rc2
-    ## https://bugzilla.redhat.com/show_bug.cgi?id=1432684
-    ## No Spice/VNC available if more then one machine is generated at a time
-    ## Comment the address line, uncomment the none line and the console block below
-    #listen_type = "none"
     listen_type = "address"
   }
 
   ## Makes the tty0 available via `virsh console`
-  #console {
-  #  type = "pty"
-  #  target_port = "0"
-  #}
+  console {
+    type = "pty"
+    target_port = "0"
+  }
 
   network_interface {
     network_name = "default"
-
     # Requires qemu-agent container if network is not native to libvirt
     wait_for_lease = true
   }

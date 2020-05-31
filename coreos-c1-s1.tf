@@ -1,5 +1,9 @@
 # https://github.com/dmacvicar/terraform-provider-libvirt/blob/master/examples/coreos/main.tf
 #
+terraform {
+  required_version = ">= 0.12"
+}
+
 # -[Provider]--------------------------------------------------------------
 provider "libvirt" {
   uri = "qemu:///system"
@@ -11,19 +15,19 @@ variable "hosts" {
 }
 
 variable "hostname_format" {
-  type    = "string"
-  default = "coreos%02d"
+  type    = string
+  default = "l5490-infrastructure-coreos-c1-s%02d"
 }
 
 # variable "libvirt_provider" {
-#   type = "string"
+#   type = string
 # }
 
 # -[Resources]-------------------------------------------------------------
 resource "libvirt_volume" "coreos-disk" {
   name             = "${format(var.hostname_format, count.index + 1)}.qcow2"
-  count            = "${var.hosts}"
-  base_volume_name = "coreos_production_qemu"
+  count            = var.hosts
+  base_volume_name = "coreos_production_qemu_image.img"
   pool             = "default"
   format           = "qcow2"
 }
@@ -32,23 +36,23 @@ resource "libvirt_volume" "coreos-disk" {
 # resource "libvirt_ignition" "ignition" {
 #   name    = "${format(var.hostname_format, count.index + 1)}-ignition"
 #   pool    = "default"
-#   count   = "${var.hosts}"
-#   content = "${element(data.ignition_config.startup.*.rendered, count.index)}"
+#   count   = var.hosts
+#   content = element(data.ignition_config.startup.*.rendered, count.index)
 # }
 
 # Create the virtual machines
 resource "libvirt_domain" "coreos-machine" {
-  count  = "${var.hosts}"
-  name   = "${format(var.hostname_format, count.index + 1)}"
+  count  = var.hosts
+  name   = format(var.hostname_format, count.index + 1)
   vcpu   = "2"
   memory = "1048"
 
   ## Use qemu-agent in conjunction with the container
   #qemu_agent = true
-  #coreos_ignition = "${element(libvirt_ignition.ignition.*.id, count.index)}"
+  #coreos_ignition = element(libvirt_ignition.ignition.*.id, count.index)
 
   disk {
-    volume_id = "${element(libvirt_volume.coreos-disk.*.id, count.index)}"
+    volume_id = element(libvirt_volume.coreos-disk.*.id, count.index)
   }
 
   graphics {
@@ -84,5 +88,6 @@ resource "libvirt_domain" "coreos-machine" {
 
 # -[Output]-------------------------------------------------------------
 output "ipv4" {
-  value = "${libvirt_domain.coreos-machine.*.network_interface.0.addresses}"
+  value = libvirt_domain.coreos-machine.*.network_interface.0.addresses
 }
+

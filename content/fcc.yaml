@@ -1,0 +1,10 @@
+---
+variant: fcos
+version: 1.0.0
+passwd:
+  users:
+    - name: ${user}
+      password_hash: ${password}
+      ssh_authorized_keys: 
+       - ${ssh_key}
+      groups: [ sudo ]

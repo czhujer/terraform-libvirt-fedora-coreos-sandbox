@@ -466,7 +466,7 @@ systemd:
         #ExecStartPre=-/bin/bash -c 'docker ps -aqf "name=%i_*" | xargs docker rm'
 
         # Compose up
-        ExecStart=/bin/bash -c 'cd /opt/docker/compose/owncloudstack && /opt/bin/docker-compose up -d'
+        ExecStart=/bin/bash -c 'cd /opt/docker/compose/owncloudstack && /opt/bin/docker-compose up'
 
         # Compose down, remove containers
         ExecStop=/bin/bash -c 'cd /opt/docker/compose/owncloudstack && /opt/bin/docker-compose down'

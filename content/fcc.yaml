@@ -151,9 +151,9 @@ storage:
                 retries: 5
               volumes:
                 - web_data:/mnt/data
-                - ./apache-conf/status.conf:/etc/apache2/mods-enabled/status.conf
-                - ./owncloud-conf/status-opcache/htaccess:/var/www/owncloud/status-opcache/.htaccess
-                - ./owncloud-conf/status-opcache/status.php:/var/www/owncloud/status-opcache/status.php
+                - ./apache-conf/status.conf:/etc/apache2/mods-enabled/status.conf:z
+                - ./owncloud-conf/status-opcache/htaccess:/var/www/owncloud/status-opcache/.htaccess:z
+                - ./owncloud-conf/status-opcache/status.php:/var/www/owncloud/status-opcache/status.php:z
               networks:
                 - app-network
             apache-exporter:
@@ -194,7 +194,7 @@ storage:
               ports:
                 - "80:80"
               volumes:
-                - ./nginx-conf:/etc/nginx/conf.d
+                - ./nginx-conf:/etc/nginx/conf.d:z
               networks:
                 - app-network
             webserver-exporter:

@@ -10,7 +10,7 @@ terraform {
 
 # -[Provider]--------------------------------------------------------------
 provider "libvirt" {
-  uri = "qemu:///system"
+  uri = var.libvirt_uri
 }
 
 provider "ct" {
@@ -18,6 +18,10 @@ provider "ct" {
 }
 
 # -[Variables]-------------------------------------------------------------
+variable "libvirt_uri" {
+  type = string
+  default = "qemu:///system"
+}
 variable "hosts" {
   default = 1
 }

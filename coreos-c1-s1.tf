@@ -14,6 +14,7 @@ provider "libvirt" {
 }
 
 provider "ct" {
+  version = ">= 0.6.1"
 }
 
 # -[Variables]-------------------------------------------------------------
@@ -68,7 +69,7 @@ data "ct_config" "startup_ign" {
 resource "libvirt_volume" "coreos-disk" {
   name             = "${format(var.hostname_format, count.index + 1)}.qcow2"
   count            = var.hosts
-  base_volume_name = "fedora-coreos-31.20200505.3.0-qemu.x86_64.qcow2"
+  base_volume_name = "fedora-coreos-32.20200726.3.1-qemu.x86_64.qcow2"
   pool             = "default"
   format           = "qcow2"
 }
